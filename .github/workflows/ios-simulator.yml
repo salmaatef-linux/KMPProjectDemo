@@ -23,8 +23,43 @@ jobs:
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Select Xcode Version
-        run: sudo xcode-select -s /Applications/Xcode.app
+      - name: Detect and Select Compatible Xcode (Xcode 16+)
+        run: |
+          echo "=== Available Xcodes in /Applications ==="
+          ls -d /Applications/Xcode* || true
+
+          SELECTED_XCODE=""
+          # Search for Xcode 16 or newer in descending order
+          for x in $(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -r); do
+            if [ -d "$x" ]; then
+              SELECTED_XCODE="$x"
+              break
+            fi
+          done
+
+          # Check if default /Applications/Xcode.app is version 16+
+          if [ -z "$SELECTED_XCODE" ] && [ -d "/Applications/Xcode.app" ]; then
+            VERSION_STR=$(/Applications/Xcode.app/Contents/Developer/usr/bin/xcodebuild -version | grep "Xcode" | awk '{print $2}')
+            MAJOR_VER=$(echo "$VERSION_STR" | cut -d. -f1)
+            if [ "$MAJOR_VER" -ge 16 ]; then
+              SELECTED_XCODE="/Applications/Xcode.app"
+            fi
+          fi
+
+          if [ -z "$SELECTED_XCODE" ]; then
+            echo "ERROR: Xcode 16 or newer (required for project file format objectVersion 77) was not found on this runner!"
+            exit 1
+          fi
+
+          echo "Selected Xcode path: $SELECTED_XCODE"
+          sudo xcode-select -s "$SELECTED_XCODE/Contents/Developer"
+          
+          echo "=== Verified Xcode Version ==="
+          xcodebuild -version
+
+      - name: Verify Project and Schemes
+        run: |
+          xcodebuild -project iosApp/iosApp.xcodeproj -list
 
       - name: Build iOS Simulator App
         run: |
@@ -32,6 +67,7 @@ jobs:
                      -scheme iosApp \
                      -sdk iphonesimulator \
                      -configuration Debug \
+                     -derivedDataPath build/derivedData \
                      CODE_SIGN_IDENTITY="" \
                      CODE_SIGNING_REQUIRED=NO \
                      CODE_SIGNING_ALLOWED=NO \
@@ -39,12 +75,14 @@ jobs:
 
       - name: Package App for Appetize.io
         run: |
-          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "iosApp.app" -type d | head -n 1)
-          if [ -z "$APP_PATH" ]; then
-            echo "Error: iosApp.app not found in DerivedData"
+          APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Error: iosApp.app not found at $APP_PATH"
+            echo "Listing DerivedData contents for debugging:"
+            find build/derivedData -name "*.app" || true
             exit 1
           fi
-          echo "Found app at: `echo $APP_PATH`"
+          echo "Found app at: $APP_PATH"
           mkdir -p payload
           cp -r "$APP_PATH" payload/
           cd payload
