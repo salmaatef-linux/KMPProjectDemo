@@ -33,22 +33,36 @@ jobs:
           echo "Available Xcodes in /Applications:"
           ls -d /Applications/Xcode* || true
 
-          
+
       - name: Select and Verify Xcode
         run: |
-          echo "Available Xcode versions:"
+          echo "=== Available Xcode versions ==="
           ls -d /Applications/Xcode*.app || true
 
-          echo "Selecting Xcode 16.4 if available"
+          echo "=== Active Xcode before selection ==="
+          xcode-select -p
+          xcodebuild -version
+
+          echo "=== Select available Xcode ==="
           if [ -d "/Applications/Xcode_16.4.app" ]; then
             sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
           elif [ -d "/Applications/Xcode.app" ]; then
             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+          else
+            echo "ERROR: No expected Xcode installation found"
+            exit 1
           fi
 
+          echo "=== Selected Xcode ==="
+          xcode-select -p
           xcodebuild -version
+
+          echo "=== Available simulator runtimes ==="
           xcrun simctl list runtimes
 
+          echo "=== Available simulator devices ==="
+          xcrun simctl list devices available
+          
       # - name: Select and Verify Compatible Xcode (16+)
       #   run: |
       #     SELECTED_XCODE=""
