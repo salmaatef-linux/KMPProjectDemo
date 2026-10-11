@@ -117,19 +117,34 @@ jobs:
 
       - name: Package App for Appetize.io
         run: |
-          APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
+          APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
+
           if [ ! -d "$APP_PATH" ]; then
-            echo "Error: iosApp.app not found at $APP_PATH"
-            echo "Listing DerivedData contents for debugging:"
+            echo "Error: App not found at $APP_PATH"
             find build/derivedData -name "*.app" || true
             exit 1
           fi
-          echo "Found app at: $APP_PATH"
+
           mkdir -p payload
-          cp -r "$APP_PATH" payload/
+          cp -R "$APP_PATH" payload/
           cd payload
-          zip -r ../iosApp.zip iosApp.app
-          cd ..
+          zip -r ../iosApp.zip KMPProjectDemo.app
+          
+      # - name: Package App for Appetize.io
+      #   run: |
+      #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
+      #     if [ ! -d "$APP_PATH" ]; then
+      #       echo "Error: iosApp.app not found at $APP_PATH"
+      #       echo "Listing DerivedData contents for debugging:"
+      #       find build/derivedData -name "*.app" || true
+      #       exit 1
+      #     fi
+      #     echo "Found app at: $APP_PATH"
+      #     mkdir -p payload
+      #     cp -r "$APP_PATH" payload/
+      #     cd payload
+      #     zip -r ../iosApp.zip iosApp.app
+      #     cd ..
 
       - name: Upload iOS Simulator Artifact
         uses: actions/upload-artifact@v4
