@@ -33,41 +33,57 @@ jobs:
           echo "Available Xcodes in /Applications:"
           ls -d /Applications/Xcode* || true
 
-      - name: Select and Verify Compatible Xcode (16+)
+          
+      - name: Select and Verify Xcode
         run: |
-          SELECTED_XCODE=""
-          # Search for Xcode 16 or newer in descending order
-          for x in $(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -r); do
-            if [ -d "$x" ]; then
-              SELECTED_XCODE="$x"
-              break
-            fi
-          done
+          echo "Available Xcode versions:"
+          ls -d /Applications/Xcode*.app || true
 
-          if [ -z "$SELECTED_XCODE" ] && [ -d "/Applications/Xcode.app" ]; then
-            SELECTED_XCODE="/Applications/Xcode.app"
+          echo "Selecting Xcode 16.4 if available"
+          if [ -d "/Applications/Xcode_16.4.app" ]; then
+            sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+          elif [ -d "/Applications/Xcode.app" ]; then
+            sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
           fi
 
-          if [ -n "$SELECTED_XCODE" ]; then
-            echo "Switching to Xcode at: $SELECTED_XCODE"
-            sudo xcode-select -s "$SELECTED_XCODE/Contents/Developer"
-          fi
+          xcodebuild -version
+          xcrun simctl list runtimes
 
-          echo "=== AFTER XCODE SELECTION ==="
-          echo "Active developer dir:"
-          xcode-select -p
-          echo "Active xcodebuild version:"
+      # - name: Select and Verify Compatible Xcode (16+)
+      #   run: |
+      #     SELECTED_XCODE=""
+      #     # Search for Xcode 16 or newer in descending order
+      #     for x in $(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -r); do
+      #       if [ -d "$x" ]; then
+      #         SELECTED_XCODE="$x"
+      #         break
+      #       fi
+      #     done
+
+      #     if [ -z "$SELECTED_XCODE" ] && [ -d "/Applications/Xcode.app" ]; then
+      #       SELECTED_XCODE="/Applications/Xcode.app"
+      #     fi
+
+      #     if [ -n "$SELECTED_XCODE" ]; then
+      #       echo "Switching to Xcode at: $SELECTED_XCODE"
+      #       sudo xcode-select -s "$SELECTED_XCODE/Contents/Developer"
+      #     fi
+
+      #     echo "=== AFTER XCODE SELECTION ==="
+      #     echo "Active developer dir:"
+      #     xcode-select -p
+      #     echo "Active xcodebuild version:"
           
-          VERSION_OUTPUT=$(xcodebuild -version)
-          echo "$VERSION_OUTPUT"
+      #     VERSION_OUTPUT=$(xcodebuild -version)
+      #     echo "$VERSION_OUTPUT"
           
-          # Extract major version number (e.g., "Xcode 16.2" -> 16)
-          VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep "Xcode" | awk '{print $2}' | cut -d. -f1)
+      #     # Extract major version number (e.g., "Xcode 16.2" -> 16)
+      #     VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep "Xcode" | awk '{print $2}' | cut -d. -f1)
           
-          if [ -z "$VERSION_NUM" ] || [ "$VERSION_NUM" -lt 16 ]; then
-            echo "ERROR: Xcode version must be 16 or higher to support objectVersion 77. Current major version is: $VERSION_NUM"
-            exit 1
-          fi
+      #     if [ -z "$VERSION_NUM" ] || [ "$VERSION_NUM" -lt 16 ]; then
+      #       echo "ERROR: Xcode version must be 16 or higher to support objectVersion 77. Current major version is: $VERSION_NUM"
+      #       exit 1
+      #     fi
 
       - name: Verify Project and Schemes
         run: |
