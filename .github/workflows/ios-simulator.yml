@@ -1,0 +1,58 @@
+name: Build iOS Simulator App for Appetize
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+
+jobs:
+  build-ios-simulator:
+    runs-on: macos-14
+    
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Java JDK
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+          cache: 'gradle'
+
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew
+
+      - name: Select Xcode Version
+        run: sudo xcode-select -s /Applications/Xcode.app
+
+      - name: Build iOS Simulator App
+        run: |
+          xcodebuild -project iosApp/iosApp.xcodeproj \
+                     -scheme iosApp \
+                     -sdk iphonesimulator \
+                     -configuration Debug \
+                     CODE_SIGN_IDENTITY="" \
+                     CODE_SIGNING_REQUIRED=NO \
+                     CODE_SIGNING_ALLOWED=NO \
+                     build
+
+      - name: Package App for Appetize.io
+        run: |
+          APP_PATH=$(find ~/Library/Developer/Xcode/DerivedData -name "iosApp.app" -type d | head -n 1)
+          if [ -z "$APP_PATH" ]; then
+            echo "Error: iosApp.app not found in DerivedData"
+            exit 1
+          fi
+          echo "Found app at: `echo $APP_PATH`"
+          mkdir -p payload
+          cp -r "$APP_PATH" payload/
+          cd payload
+          zip -r ../iosApp.zip iosApp.app
+          cd ..
+
+      - name: Upload iOS Simulator Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iosApp-simulator
+          path: iosApp.zip
