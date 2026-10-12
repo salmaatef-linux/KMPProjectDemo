@@ -1,4 +1,4 @@
-name: Build iOS Simulator App for Appetize
+name: Build iOS Device IPA
 
 on:
   workflow_dispatch:
