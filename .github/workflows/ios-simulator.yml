@@ -103,32 +103,64 @@ jobs:
         run: |
           xcodebuild -project iosApp/iosApp.xcodeproj -list
 
-      - name: Build iOS Simulator App
+      - name: Build iOS Device App
         run: |
-          xcodebuild -project iosApp/iosApp.xcodeproj \
-                     -scheme iosApp \
-                     -sdk iphonesimulator \
-                     -configuration Debug \
-                     -derivedDataPath build/derivedData \
-                     CODE_SIGN_IDENTITY="" \
-                     CODE_SIGNING_REQUIRED=NO \
-                     CODE_SIGNING_ALLOWED=NO \
-                     build
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            build
 
-      - name: Package App for Appetize.io
+      - name: Package Unsigned IPA
         run: |
-          APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
+          APP_PATH="build/derivedData/Build/Products/Release-iphoneos/KMPProjectDemo.app"
 
           if [ ! -d "$APP_PATH" ]; then
-            echo "Error: App not found at $APP_PATH"
+            echo "App not found:"
             find build/derivedData -name "*.app" || true
             exit 1
           fi
 
-          mkdir -p payload
-          cp -R "$APP_PATH" payload/
-          cd payload
-          zip -r ../iosApp.zip KMPProjectDemo.app
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+          cd build/ipa
+          zip -r ../../KMPProjectDemo-unsigned.ipa Payload
+
+      - name: Upload iOS IPA Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: KMPProjectDemo-unsigned-ipa
+          path: KMPProjectDemo-unsigned.ipa
+
+      # - name: Build iOS Simulator App
+      #   run: |
+      #     xcodebuild -project iosApp/iosApp.xcodeproj \
+      #                -scheme iosApp \
+      #                -sdk iphonesimulator \
+      #                -configuration Debug \
+      #                -derivedDataPath build/derivedData \
+      #                CODE_SIGN_IDENTITY="" \
+      #                CODE_SIGNING_REQUIRED=NO \
+      #                CODE_SIGNING_ALLOWED=NO \
+      #                build
+
+      # - name: Package App for Appetize.io
+      #   run: |
+      #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
+
+      #     if [ ! -d "$APP_PATH" ]; then
+      #       echo "Error: App not found at $APP_PATH"
+      #       find build/derivedData -name "*.app" || true
+      #       exit 1
+      #     fi
+
+      #     mkdir -p payload
+      #     cp -R "$APP_PATH" payload/
+      #     cd payload
+      #     zip -r ../iosApp.zip KMPProjectDemo.app
           
       # - name: Package App for Appetize.io
       #   run: |
