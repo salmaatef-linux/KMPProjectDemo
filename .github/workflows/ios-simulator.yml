@@ -1,4 +1,4 @@
-name: Build iOS Device IPA
+name: Build iOS Simulator for Appetize
 
 on:
   workflow_dispatch:
@@ -8,7 +8,7 @@ on:
 jobs:
   build-ios-simulator:
     runs-on: macos-15
-    
+
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -16,34 +16,18 @@ jobs:
       - name: Set up Java JDK
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '17'
-          cache: 'gradle'
+          cache: gradle
 
       - name: Grant execute permission for gradlew
         run: chmod +x gradlew
 
-      - name: Diagnose Xcode (Before Selection)
-        run: |
-          echo "=== BEFORE XCODE SELECTION ==="
-          echo "Active developer dir:"
-          xcode-select -p
-          echo "Active xcodebuild version:"
-          xcodebuild -version
-          echo "Available Xcodes in /Applications:"
-          ls -d /Applications/Xcode* || true
-
-
       - name: Select and Verify Xcode
         run: |
-          echo "=== Available Xcode versions ==="
+          echo "=== Available Xcodes ==="
           ls -d /Applications/Xcode*.app || true
 
-          echo "=== Active Xcode before selection ==="
-          xcode-select -p
-          xcodebuild -version
-
-          echo "=== Select available Xcode ==="
           if [ -d "/Applications/Xcode_16.4.app" ]; then
             sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
           elif [ -d "/Applications/Xcode.app" ]; then
@@ -57,129 +41,229 @@ jobs:
           xcode-select -p
           xcodebuild -version
 
-          echo "=== Available simulator runtimes ==="
+          echo "=== Available Simulator Runtimes ==="
           xcrun simctl list runtimes
-
-          echo "=== Available simulator devices ==="
-          xcrun simctl list devices available
-          
-      # - name: Select and Verify Compatible Xcode (16+)
-      #   run: |
-      #     SELECTED_XCODE=""
-      #     # Search for Xcode 16 or newer in descending order
-      #     for x in $(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -r); do
-      #       if [ -d "$x" ]; then
-      #         SELECTED_XCODE="$x"
-      #         break
-      #       fi
-      #     done
-
-      #     if [ -z "$SELECTED_XCODE" ] && [ -d "/Applications/Xcode.app" ]; then
-      #       SELECTED_XCODE="/Applications/Xcode.app"
-      #     fi
-
-      #     if [ -n "$SELECTED_XCODE" ]; then
-      #       echo "Switching to Xcode at: $SELECTED_XCODE"
-      #       sudo xcode-select -s "$SELECTED_XCODE/Contents/Developer"
-      #     fi
-
-      #     echo "=== AFTER XCODE SELECTION ==="
-      #     echo "Active developer dir:"
-      #     xcode-select -p
-      #     echo "Active xcodebuild version:"
-          
-      #     VERSION_OUTPUT=$(xcodebuild -version)
-      #     echo "$VERSION_OUTPUT"
-          
-      #     # Extract major version number (e.g., "Xcode 16.2" -> 16)
-      #     VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep "Xcode" | awk '{print $2}' | cut -d. -f1)
-          
-      #     if [ -z "$VERSION_NUM" ] || [ "$VERSION_NUM" -lt 16 ]; then
-      #       echo "ERROR: Xcode version must be 16 or higher to support objectVersion 77. Current major version is: $VERSION_NUM"
-      #       exit 1
-      #     fi
 
       - name: Verify Project and Schemes
         run: |
           xcodebuild -project iosApp/iosApp.xcodeproj -list
 
-      - name: Build iOS Device App
+      - name: Build iOS Simulator App
         run: |
           xcodebuild \
             -project iosApp/iosApp.xcodeproj \
             -scheme iosApp \
-            -sdk iphoneos \
-            -configuration Release \
+            -sdk iphonesimulator \
+            -configuration Debug \
             -derivedDataPath build/derivedData \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
 
-      - name: Package Unsigned IPA
+      - name: Package App for Appetize
         run: |
-          APP_PATH="build/derivedData/Build/Products/Release-iphoneos/KMPProjectDemo.app"
+          APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
 
           if [ ! -d "$APP_PATH" ]; then
-            echo "App not found:"
-            find build/derivedData -name "*.app" || true
+            echo "ERROR: Simulator app not found at $APP_PATH"
+            echo "Searching for generated app bundles:"
+            find build/derivedData -name "*.app" -type d || true
             exit 1
           fi
 
-          mkdir -p build/ipa/Payload
-          cp -R "$APP_PATH" build/ipa/Payload/
-          cd build/ipa
-          zip -r ../../KMPProjectDemo-unsigned.ipa Payload
+          mkdir -p build/package
+          ditto -c -k --sequesterRsrc --keepParent \
+            "$APP_PATH" build/package/KMPProjectDemo-ios-simulator.zip
 
-      - name: Upload iOS IPA Artifact
+      - name: Upload iOS Simulator Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: KMPProjectDemo-unsigned-ipa
-          path: KMPProjectDemo-unsigned.ipa
+          name: KMPProjectDemo-ios-simulator
+          path: build/package/KMPProjectDemo-ios-simulator.zip
+          if-no-files-found: error
 
-      # - name: Build iOS Simulator App
-      #   run: |
-      #     xcodebuild -project iosApp/iosApp.xcodeproj \
-      #                -scheme iosApp \
-      #                -sdk iphonesimulator \
-      #                -configuration Debug \
-      #                -derivedDataPath build/derivedData \
-      #                CODE_SIGN_IDENTITY="" \
-      #                CODE_SIGNING_REQUIRED=NO \
-      #                CODE_SIGNING_ALLOWED=NO \
-      #                build
+# name: Build iOS Device IPA
+# on:
+#   workflow_dispatch:
+#   push:
+#     branches: [ main ]
 
-      # - name: Package App for Appetize.io
-      #   run: |
-      #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
+# jobs:
+#   build-ios-simulator:
+#     runs-on: macos-15
+    
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
 
-      #     if [ ! -d "$APP_PATH" ]; then
-      #       echo "Error: App not found at $APP_PATH"
-      #       find build/derivedData -name "*.app" || true
-      #       exit 1
-      #     fi
+#       - name: Set up Java JDK
+#         uses: actions/setup-java@v4
+#         with:
+#           distribution: 'temurin'
+#           java-version: '17'
+#           cache: 'gradle'
 
-      #     mkdir -p payload
-      #     cp -R "$APP_PATH" payload/
-      #     cd payload
-      #     zip -r ../iosApp.zip KMPProjectDemo.app
+#       - name: Grant execute permission for gradlew
+#         run: chmod +x gradlew
+
+#       - name: Diagnose Xcode (Before Selection)
+#         run: |
+#           echo "=== BEFORE XCODE SELECTION ==="
+#           echo "Active developer dir:"
+#           xcode-select -p
+#           echo "Active xcodebuild version:"
+#           xcodebuild -version
+#           echo "Available Xcodes in /Applications:"
+#           ls -d /Applications/Xcode* || true
+
+
+#       - name: Select and Verify Xcode
+#         run: |
+#           echo "=== Available Xcode versions ==="
+#           ls -d /Applications/Xcode*.app || true
+
+#           echo "=== Active Xcode before selection ==="
+#           xcode-select -p
+#           xcodebuild -version
+
+#           echo "=== Select available Xcode ==="
+#           if [ -d "/Applications/Xcode_16.4.app" ]; then
+#             sudo xcode-select -s /Applications/Xcode_16.4.app/Contents/Developer
+#           elif [ -d "/Applications/Xcode.app" ]; then
+#             sudo xcode-select -s /Applications/Xcode.app/Contents/Developer
+#           else
+#             echo "ERROR: No expected Xcode installation found"
+#             exit 1
+#           fi
+
+#           echo "=== Selected Xcode ==="
+#           xcode-select -p
+#           xcodebuild -version
+
+#           echo "=== Available simulator runtimes ==="
+#           xcrun simctl list runtimes
+
+#           echo "=== Available simulator devices ==="
+#           xcrun simctl list devices available
           
-      # - name: Package App for Appetize.io
-      #   run: |
-      #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
-      #     if [ ! -d "$APP_PATH" ]; then
-      #       echo "Error: iosApp.app not found at $APP_PATH"
-      #       echo "Listing DerivedData contents for debugging:"
-      #       find build/derivedData -name "*.app" || true
-      #       exit 1
-      #     fi
-      #     echo "Found app at: $APP_PATH"
-      #     mkdir -p payload
-      #     cp -r "$APP_PATH" payload/
-      #     cd payload
-      #     zip -r ../iosApp.zip iosApp.app
-      #     cd ..
+#       # - name: Select and Verify Compatible Xcode (16+)
+#       #   run: |
+#       #     SELECTED_XCODE=""
+#       #     # Search for Xcode 16 or newer in descending order
+#       #     for x in $(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -r); do
+#       #       if [ -d "$x" ]; then
+#       #         SELECTED_XCODE="$x"
+#       #         break
+#       #       fi
+#       #     done
 
-      # - name: Upload iOS Simulator Artifact
-      #   uses: actions/upload-artifact@v4
-      #   with:
-      #     name: iosApp-simulator
-      #     path: iosApp.zip
+#       #     if [ -z "$SELECTED_XCODE" ] && [ -d "/Applications/Xcode.app" ]; then
+#       #       SELECTED_XCODE="/Applications/Xcode.app"
+#       #     fi
+
+#       #     if [ -n "$SELECTED_XCODE" ]; then
+#       #       echo "Switching to Xcode at: $SELECTED_XCODE"
+#       #       sudo xcode-select -s "$SELECTED_XCODE/Contents/Developer"
+#       #     fi
+
+#       #     echo "=== AFTER XCODE SELECTION ==="
+#       #     echo "Active developer dir:"
+#       #     xcode-select -p
+#       #     echo "Active xcodebuild version:"
+          
+#       #     VERSION_OUTPUT=$(xcodebuild -version)
+#       #     echo "$VERSION_OUTPUT"
+          
+#       #     # Extract major version number (e.g., "Xcode 16.2" -> 16)
+#       #     VERSION_NUM=$(echo "$VERSION_OUTPUT" | grep "Xcode" | awk '{print $2}' | cut -d. -f1)
+          
+#       #     if [ -z "$VERSION_NUM" ] || [ "$VERSION_NUM" -lt 16 ]; then
+#       #       echo "ERROR: Xcode version must be 16 or higher to support objectVersion 77. Current major version is: $VERSION_NUM"
+#       #       exit 1
+#       #     fi
+
+#       - name: Verify Project and Schemes
+#         run: |
+#           xcodebuild -project iosApp/iosApp.xcodeproj -list
+
+#       - name: Build iOS Device App
+#         run: |
+#           xcodebuild \
+#             -project iosApp/iosApp.xcodeproj \
+#             -scheme iosApp \
+#             -sdk iphoneos \
+#             -configuration Release \
+#             -derivedDataPath build/derivedData \
+#             CODE_SIGNING_ALLOWED=NO \
+#             build
+
+#       - name: Package Unsigned IPA
+#         run: |
+#           APP_PATH="build/derivedData/Build/Products/Release-iphoneos/KMPProjectDemo.app"
+
+#           if [ ! -d "$APP_PATH" ]; then
+#             echo "App not found:"
+#             find build/derivedData -name "*.app" || true
+#             exit 1
+#           fi
+
+#           mkdir -p build/ipa/Payload
+#           cp -R "$APP_PATH" build/ipa/Payload/
+#           cd build/ipa
+#           zip -r ../../KMPProjectDemo-unsigned.ipa Payload
+
+#       - name: Upload iOS IPA Artifact
+#         uses: actions/upload-artifact@v4
+#         with:
+#           name: KMPProjectDemo-unsigned-ipa
+#           path: KMPProjectDemo-unsigned.ipa
+
+#       # - name: Build iOS Simulator App
+#       #   run: |
+#       #     xcodebuild -project iosApp/iosApp.xcodeproj \
+#       #                -scheme iosApp \
+#       #                -sdk iphonesimulator \
+#       #                -configuration Debug \
+#       #                -derivedDataPath build/derivedData \
+#       #                CODE_SIGN_IDENTITY="" \
+#       #                CODE_SIGNING_REQUIRED=NO \
+#       #                CODE_SIGNING_ALLOWED=NO \
+#       #                build
+
+#       # - name: Package App for Appetize.io
+#       #   run: |
+#       #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
+
+#       #     if [ ! -d "$APP_PATH" ]; then
+#       #       echo "Error: App not found at $APP_PATH"
+#       #       find build/derivedData -name "*.app" || true
+#       #       exit 1
+#       #     fi
+
+#       #     mkdir -p payload
+#       #     cp -R "$APP_PATH" payload/
+#       #     cd payload
+#       #     zip -r ../iosApp.zip KMPProjectDemo.app
+          
+#       # - name: Package App for Appetize.io
+#       #   run: |
+#       #     APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/iosApp.app"
+#       #     if [ ! -d "$APP_PATH" ]; then
+#       #       echo "Error: iosApp.app not found at $APP_PATH"
+#       #       echo "Listing DerivedData contents for debugging:"
+#       #       find build/derivedData -name "*.app" || true
+#       #       exit 1
+#       #     fi
+#       #     echo "Found app at: $APP_PATH"
+#       #     mkdir -p payload
+#       #     cp -r "$APP_PATH" payload/
+#       #     cd payload
+#       #     zip -r ../iosApp.zip iosApp.app
+#       #     cd ..
+
+#       # - name: Upload iOS Simulator Artifact
+#       #   uses: actions/upload-artifact@v4
+#       #   with:
+#       #     name: iosApp-simulator
+#       #     path: iosApp.zip
