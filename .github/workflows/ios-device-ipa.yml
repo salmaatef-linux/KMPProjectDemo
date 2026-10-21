@@ -7,6 +7,7 @@ on:
     branches:
       - main
 
+
 jobs:
   build-ios-device:
     runs-on: macos-15
@@ -23,6 +24,9 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Make Gradle wrapper executable
+        run: chmod +x gradlew
+
       - name: Build iOS device app
         run: |
           xcodebuild \
@@ -35,6 +39,7 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGN_IDENTITY="" \
             build
+
 
       - name: Package unsigned IPA
         run: |
