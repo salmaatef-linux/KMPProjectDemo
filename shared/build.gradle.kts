@@ -72,20 +72,7 @@ kotlin {
         // The SQLDelight plugin also registers this directory with commonMain.
         // Remove that source root so IDE analysis does not see the generated API
         // without the SQLDelight runtime on Wasm.
-        commonMain.kotlin.setSrcDirs(
-            commonMain.kotlin.srcDirs.filterNot { it == generatedSqlDelightSources }
-        )
-        // Keep Compose's generated common API roots after replacing the source
-        // directory list above.
-        commonMain.kotlin.srcDir(
-            layout.buildDirectory.dir("generated/compose/resourceGenerator/kotlin/commonResClass")
-        )
-        commonMain.kotlin.srcDir(
-            layout.buildDirectory.dir("generated/compose/resourceGenerator/kotlin/commonMainResourceAccessors")
-        )
-        commonMain.kotlin.srcDir(
-            layout.buildDirectory.dir("generated/compose/resourceGenerator/kotlin/commonMainResourceCollectors")
-        )
+        commonMain.kotlin.srcDirs.remove(generatedSqlDelightSources)
         commonMain.kotlin.exclude("com/example/kmpprojectdemo/db/**")
         commonMain.dependencies {
             implementation(libs.compose.runtime)
