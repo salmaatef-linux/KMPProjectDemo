@@ -1,0 +1,62 @@
+
+name: Build iOS Device IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-ios-device:
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: "16.4"
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Build iOS device app
+        run: |
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -sdk iphoneos \
+            -configuration Release \
+            -derivedDataPath build/derivedData \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build
+
+      - name: Package unsigned IPA
+        run: |
+          set -e
+
+          APP_PATH="build/derivedData/Build/Products/Release-iphoneos/KMPProjectDemo.app"
+
+          if [ ! -d "$APP_PATH" ]; then
+            echo "Error: Built iOS app not found at $APP_PATH"
+            find build/derivedData/Build/Products -maxdepth 3 -type d
+            exit 1
+          fi
+
+          mkdir -p build/ipa/Payload
+          cp -R "$APP_PATH" build/ipa/Payload/
+
+          cd build/ipa
+          zip -r "$GITHUB_WORKSPACE/KMPProjectDemo-unsigned-iphoneos.ipa" Payload
+
+      - name: Upload unsigned IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: KMPProjectDemo-unsigned-iphoneos
+          path: KMPProjectDemo-unsigned-iphoneos.ipa
+          if-no-files-found: error
