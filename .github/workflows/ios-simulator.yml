@@ -48,6 +48,12 @@ jobs:
         run: |
           xcodebuild -project iosApp/iosApp.xcodeproj -list
 
+      - name: Integrate KMPNotifier Swift Package
+        env:
+          XCODEPROJ_PATH: ${{ github.workspace }}/iosApp/iosApp.xcodeproj
+        run: |
+          ./gradlew :shared:integrateLinkagePackage
+
       - name: Build iOS Simulator App
         run: |
           xcodebuild \

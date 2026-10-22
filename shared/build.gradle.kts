@@ -18,9 +18,13 @@ kotlin {
             baseName = "Shared"
             isStatic = true
             linkerOpts.add("-lsqlite3")
+
+            export("io.github.mirzemehdi:kmpnotifier-core:2.0.1")
+            export("io.github.mirzemehdi:kmpnotifier-local:2.0.1")
+            export("io.github.mirzemehdi:kmpnotifier-push-firebase:2.0.1")
         }
     }
-    
+
     js {
         browser()
         binaries.executable()
@@ -76,18 +80,20 @@ kotlin {
         commonMain.kotlin.srcDirs.remove(generatedSqlDelightSources)
         commonMain.kotlin.exclude("com/example/kmpprojectdemo/db/**")
         commonMain.dependencies {
-            implementation(libs.compose.runtime)
-            implementation(libs.compose.foundation)
-            implementation(libs.compose.material3)
-            implementation(libs.compose.ui)
-            implementation(libs.compose.components.resources)
-            implementation(libs.compose.uiToolingPreview)
-            implementation(libs.androidx.lifecycle.viewmodelCompose)
-            implementation(libs.androidx.lifecycle.runtimeCompose)
-            implementation(libs.ktor.client.core)
-            implementation(libs.kotlinx.serialization.json)
-            implementation(libs.ktor.client.content.negotiation)
-            implementation(libs.ktor.serialization.kotlinx.json)
+                implementation(libs.compose.runtime)
+                implementation(libs.compose.foundation)
+                implementation(libs.compose.material3)
+                implementation(libs.compose.ui)
+                implementation(libs.compose.components.resources)
+                implementation(libs.compose.uiToolingPreview)
+                implementation(libs.androidx.lifecycle.viewmodelCompose)
+                implementation(libs.androidx.lifecycle.runtimeCompose)
+                implementation(libs.ktor.client.core)
+                implementation(libs.kotlinx.serialization.json)
+                implementation(libs.ktor.client.content.negotiation)
+                implementation(libs.ktor.serialization.kotlinx.json)
+                api(libs.kmpnotifier.core)
+                api(libs.kmpnotifier.push.firebase)
         }
         androidMain.get().apply {
             dependsOn(sqlDelightMain)
@@ -101,8 +107,7 @@ kotlin {
         }
         commonTest.dependencies {
             implementation(libs.kotlin.test)
-            implementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-        }
+            implementation(libs.kotlinx.coroutines.test)        }
         val iosMain = iosMain.get()
         iosArm64Main.get().dependsOn(iosMain)
         iosSimulatorArm64Main.get().dependsOn(iosMain)
