@@ -1,7 +1,7 @@
 
 import SwiftUI
 import UIKit
-import shared
+import Shared
 import FirebaseCore
 import FirebaseMessaging
 
