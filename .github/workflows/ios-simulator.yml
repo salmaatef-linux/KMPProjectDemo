@@ -54,6 +54,11 @@ jobs:
         run: |
           ./gradlew :shared:integrateLinkagePackage
 
+      - name: Check Kotlin Framework
+        run: |
+          find shared/build \( -name "Shared.framework" -o -name "shared.framework" \)
+          find shared/build -type d -name "Shared"
+
       - name: Build iOS Simulator App
         run: |
           xcodebuild \
@@ -66,7 +71,6 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             CODE_SIGNING_ALLOWED=NO \
             build
-
       - name: Package App for Appetize
         run: |
           APP_PATH="build/derivedData/Build/Products/Debug-iphonesimulator/KMPProjectDemo.app"
